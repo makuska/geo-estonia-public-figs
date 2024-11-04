@@ -171,4 +171,16 @@ export async function registerPersonRoutes(app: FastifyInstance) {
             reply.status(404).send({ message: 'no markers found!' })
         }
     })
+
+    // isikute saamine vastavalt kategooriatele otspunkt
+    app.get('/categories', async (request, reply) => {
+        try {
+            const categories = await db.category.findAll();
+            const categoryNames = categories.map(category => category.name);
+
+            return reply.status(200).send(categoryNames);
+        } catch (e) {
+            reply.status(500).send({ message: 'Error fetching categories' });
+        }
+    });
 }

@@ -27,6 +27,13 @@
 </head>
 
 <body>
+<div class="filter-container">
+  <label for="category-filter">Filter by Category:</label>
+  <select id="category-filter">
+    <option value="">All</option>
+    <!-- kategooriad tulevad script.jsist -->
+  </select>
+</div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none">
   <symbol id="icon-arrow-left" viewBox="0 0 24 24">
     <path d="M15.422 16.594 14.016 18l-6-6 6-6 1.406 1.406L10.828 12z" />
@@ -116,6 +123,7 @@
 </div>
 
 <div id="map"></div>
+
 <script type="module" src="src/script.js"></script>
 <!--    <script src="./dist/bundle.js" defer></script>-->
 

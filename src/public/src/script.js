@@ -3,7 +3,6 @@
 // --------------------------------------------------------------- //
 // --------------- Layer links and attribution ------------------- //
 // --------------------------------------------------------------- //
-
 const osmLink = '<a href="http://openstreetmap.org">OpenStreetMap</a>';
 const cartoDB = '<a href="http://cartodb.com/attributions">CartoDB</a>';
 // const stamenToner = <a href="http://maps.stamen.com">StamenToner</a>
@@ -80,6 +79,59 @@ menuItems.forEach((item) => {
 buttonClose.addEventListener("click", () => {
     closeSidebar();
 });
+
+function fetchCategories() {
+    console.log("fetching categories");
+    fetch('http://127.0.0.1:3001/person/categories')
+        .then(response => response.json())
+        .then(categories => {
+            console.log('Categories fetched:', categories);
+            const categoryFilter = document.getElementById('category-filter');
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.toLowerCase();
+                option.textContent = category;
+                categoryFilter.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error fetching categories:', error));
+}
+
+function fetchMarkers(category) {
+    const url = category ? `http://127.0.0.1:3001/person/markers?category=${category}` : 'http://127.0.0.1:3001/person/markers';
+    fetch(url)
+        .then(response => response.json())
+        .then(markerData => {
+            markers.clearLayers();
+            markerData.forEach(data => {
+                const { xCoordinate, yCoordinate, title, description } = data;
+                const marker = L.marker(new L.LatLng(xCoordinate, yCoordinate), {
+                    icon: createCustomDivIcon(),
+                    title: title
+                });
+
+                const popupContent = document.createElement('div');
+                const titleElement = document.createElement('h3');
+                titleElement.textContent = title;
+                popupContent.appendChild(titleElement);
+                const bodyElement = document.createElement('div');
+                bodyElement.innerHTML = description;
+                popupContent.appendChild(bodyElement);
+
+                marker.bindPopup(popupContent);
+                marker.on("click", clickZoom);
+                markers.addLayer(marker);
+            });
+            map.addLayer(markers);
+        })
+        .catch(error => console.error('Error fetching markers:', error));
+}
+
+document.getElementById('category-filter').addEventListener('change', function() {
+    const selectedCategory = this.value;
+    fetchMarkers(selectedCategory);
+});
+window.addEventListener('load', fetchCategories);
 
 // remove active class from menu item and content
 function addRemoveActiveItem(target, className) {
@@ -198,8 +250,8 @@ function createCustomDivIcon() {
 // Fetch marker data from the backend API
 // Define a function to fetch and create markers
 function loadMarkers() {
-    fetch('http://34.88.153.11:3001/person/markers')
-    // fetch('http://127.0.0.1:3001/person/markers')
+    // fetch('http://34.88.153.11:3001/person/markers')
+    fetch('http://127.0.0.1:3001/person/markers')
         .then(response => response.json())
         .then(markerData => {
             // Iterate over the marker data and create markers
@@ -282,8 +334,8 @@ searchbox.onInput("keyup", function (e) {
         if (map.getZoom() < 11){
             map.setZoom(11);
         }
-        const searchUrl = `http://34.88.153.11:3001/person/search?name=${encodeURIComponent(value)}`;
-        // const searchUrl = `http://127.0.0.1:3001/person/search?name=${encodeURIComponent(value)}`;
+        // const searchUrl = `http://34.88.153.11:3001/person/search?name=${encodeURIComponent(value)}`;
+        const searchUrl = `http://127.0.0.1:3001/person/search?name=${encodeURIComponent(value)}`;
 
         fetch(searchUrl)
             .then(response => response.json())
