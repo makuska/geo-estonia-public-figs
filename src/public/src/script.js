@@ -50,6 +50,78 @@ let baseLayers = {
 };
 
 L.control.layers(baseLayers).addTo(map);
+
+// ------------------------------------------------------ //
+// ---------------------- Filtering ----------------------- //
+// ------------------------------------------------------ //
+// category filtering
+document.addEventListener('DOMContentLoaded', () => {
+    const categoryDropdown = document.getElementById('categoryDropdown');
+    const map = document.getElementById('map');
+
+    console.log("Category dropdown element:", categoryDropdown);
+
+    if (!categoryDropdown) {
+        console.error("Category dropdown element not found");
+        return;
+    }
+
+    // Fetch categories and populate the dropdown
+    fetch('/category')
+        .then(response => {
+            console.log("Fetch response status:", response.status);
+            return response.json();
+        })
+        .then(categories => {
+            console.log("Categories received:", categories);
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.name;
+                option.textContent = category.name;
+                categoryDropdown.appendChild(option);
+                console.log(`Added option for category: ${category.name}`);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching categories:', error);
+        });
+
+    // Handle category selection
+    categoryDropdown.addEventListener('change', (event) => {
+        console.log("Category selected:", event.target.value);
+        const selectedCategory = event.target.value;
+        fetchPersonsByCategory(selectedCategory);
+    });
+
+    function fetchPersonsByCategory(category) {
+        if (!category) {
+            console.log("No category selected, clearing map");
+            map.innerHTML = '';
+            return;
+        }
+
+        console.log(`Fetching persons for category: ${category}`);
+        fetch('http://127.0.0.1:3001/person/markers?person.categories=${encodeURIComponent(person.categories)}')
+            .then(response => {
+                console.log("Fetch response status:", response.status);
+                return response.json();
+            })
+            .then(persons => {
+                console.log("Persons received:", persons);
+                map.innerHTML = '';
+                persons.forEach(person => {
+                    const personElement = document.createElement('div');
+                    personElement.textContent = `${person.title} (${person.xCoordinate}, ${person.yCoordinate})`;
+                    map.appendChild(personElement);
+                    console.log(`Added person element: ${person.title}`);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching persons:', error);
+            });
+    }
+});
+
 // ------------------------------------------------------ //
 // ---------------------- Sidebar ----------------------- //
 // ------------------------------------------------------ //
