@@ -9,6 +9,20 @@ import { Nickname } from "./nickname/nickname.entity.js"
 import { UUID } from "node:crypto"
 import { FullName } from "./fullName/full-name.entity.js"
 
+/**
+ * Get people markers by query params, all available filters are:
+ * - `category` [**optional**] - filter by category, must be delimited by `,` (comma); e.g. `&category=MAJANDUS,TEADUS`
+ * - `subCategory` [**optional**] - filter by sub category, must be delimited by `,` (comma); e.g. `&subCategory=ehitus,kirjanuds`
+ * - `dateOfBirthStart` [**optional**] - filter by date of birth time range start, provide only year as `yyyy`; e.g. `&dateOfBirthStart=1850`
+ * - `dateOfBirthEnd` [**optional**] - filter by date of birth time range end, provide only year as `yyyy`; e.g. `&dateOfBirthEnd=1900`
+ * - `name` [**optional**] - filter by name as well; e.g. `&name=kädi`
+ *
+ * TODO if name is used then it should prob return all data, no?
+ *
+ * @example
+ * curl -X GET "http://localhost:3001/person/markers?category=MAJANDUS,KULTUUR&subCategory=ehitus,transport,tehnikateadused&name=nikolai" \
+ *      -H "Accept: application/json"
+ */
 export async function registerPersonRoutes(app: FastifyInstance): Promise<void> {
     const db: Services = await initORM()
 
@@ -179,7 +193,7 @@ export async function registerPersonRoutes(app: FastifyInstance): Promise<void> 
             name?: string
         }
 
-        console.log(category, subCategory, name, dateOfBirthStart, dateOfBirthEnd)
+        console.log('Query Parameters:', category, subCategory, name, dateOfBirthStart, dateOfBirthEnd);
 
         try {
             const queryBuilder = db.em.createQueryBuilder(Person, 'person')
@@ -206,6 +220,7 @@ export async function registerPersonRoutes(app: FastifyInstance): Promise<void> 
 
             if (category) {
                 const categories: string[] = category.split(',').map(cat => cat.trim().toUpperCase())
+                console.log('Filtering by categories:', categories);
                 queryBuilder.andWhere('categories.name IN (?)', [categories])
             }
 
@@ -234,6 +249,7 @@ export async function registerPersonRoutes(app: FastifyInstance): Promise<void> 
             }
 
             const persons: Person[] = await queryBuilder.getResultList()
+            console.log('Persons found:', persons);
 
             //Only return frontend relevant data, remove description as well
             const simplifiedPersons = persons.map(person => ({

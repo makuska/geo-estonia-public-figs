@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         console.log(`Fetching persons for category: ${category}`);
-        fetch('http://127.0.0.1:3001/person/markers?person.categories=${encodeURIComponent(person.categories)}')
+        fetch(`http://127.0.0.1:3001/person/markers?category=${encodeURIComponent(category)}`)
             .then(response => {
                 console.log("Fetch response status:", response.status);
                 return response.json();
