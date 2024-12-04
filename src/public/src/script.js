@@ -569,6 +569,11 @@ function clickZoom(e) {
     map.setView(cluster.getLatLng(), map.getMaxZoom() + 3);
   }
 }
+
+// ---------------------------------------------------- //
+// ------------------ Alphabet view ------------------- //
+// ---------------------------------------------------- //
+
 let cachedPeople = []; // Store the cached people data
 let namesFetched = false; // Flag to track whether names are already fetched
 
@@ -634,8 +639,37 @@ function populatePeopleList(data) {
       // Add click event to zoom in on the marker
       listItem.addEventListener('click', () => {
         const { xCoordinate, yCoordinate } = person;
+        const marker = findMarkerByTitle(fullName)
+        console.log(marker)
         const latLng = new L.LatLng(xCoordinate, yCoordinate);
         map.flyTo(latLng, map.getMaxZoom(), { duration: 1 });
+
+        setTimeout(() => {
+          if (marker) {
+            const popup = marker.getPopup()
+            console.log(popup)
+
+            //tbh idk, maybe keep it open, what y'all think?
+            closeSidebar()
+
+            if (popup) {
+              const cluster = marker.__parent
+
+              if (cluster) {
+                setTimeout(() => {
+                  cluster.spiderfy();
+                }, 200)
+
+                setTimeout(() => {
+                  marker.openPopup();
+                }, 200)
+              } else {
+                marker.openPopup()
+              }
+            }
+          }
+          getCenterOfMap()
+        }, 1100) //because the fly duration is 1, so open them after animation
       });
 
       listContainer.appendChild(listItem);

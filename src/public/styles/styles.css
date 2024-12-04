@@ -296,24 +296,6 @@ svg:not(:root) {
     cursor: not-allowed;
 }
 
-.home-filter-button-remove {
-    display: inline-block;
-    padding: 7px 14px;
-    background-color: rgb(198, 18, 30);
-    color: white;
-    text-align: center;
-    text-decoration: none;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 10px;
-}
-
-.home-filter-button-remove:hover {
-    background-color: rgb(232, 0, 60);
-}
-
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -365,7 +347,8 @@ svg:not(:root) {
     top: 0;
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-start;
+    justify-content: center;
+    align-items: center;
     padding: 5px;
     background-color: #f1f1f1;
     border-radius: 8px;
@@ -377,7 +360,7 @@ svg:not(:root) {
 
 #person-dropdown .alphabet-letter {
     font-size: 14px;
-    padding: 5px 8px;
+    padding: 5px 5px;
     text-align: center;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -389,7 +372,7 @@ svg:not(:root) {
 }
 
 #person-dropdown .alphabet-letter:hover {
-    background-color: #64a1e8;
+    background-color: #189318;
     color: white;
 }
 
@@ -401,7 +384,7 @@ svg:not(:root) {
     overflow-y: auto;
     flex-grow: 1;
     scrollbar-width: thin;
-    scrollbar-color: #64a1e8 #f1f1f1;
+    scrollbar-color: #189318 #f1f1f1;
 }
 
 
