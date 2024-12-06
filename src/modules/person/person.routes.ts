@@ -85,13 +85,15 @@ export async function registerPersonRoutes(
           LIMIT 15;
       `;
 
-      const results = await db.em.getConnection().execute(query, [searchTerm, searchTerm, searchTerm])
+      const results = await db.em
+        .getConnection()
+        .execute(query, [searchTerm, searchTerm, searchTerm]);
 
       const simplifiedPersons = results.map((row) => ({
         xCoordinate: row.xCoordinate,
         yCoordinate: row.yCoordinate,
         title: `${row.firstName} ${row.lastName}`,
-      }))
+      }));
 
       return reply.status(200).send(simplifiedPersons);
     } catch (e) {
@@ -247,13 +249,13 @@ export async function registerPersonRoutes(
         ])
         .leftJoinAndSelect("person.nicknames", "nicknames")
         .leftJoinAndSelect("person.categories", "categories")
-        .leftJoinAndSelect("person.subCategories", "sub_categories");
+        .leftJoinAndSelect("person.subCategories", "sub_categories")
+        .leftJoinAndSelect("person.sources", "source"); // Lisatud liitmine source tabeliga
 
       if (category && category.trim() !== "") {
         const categories: string[] = category
           .split(",")
           .map((cat) => cat.trim());
-        // console.debug("Applying category filter:", categories);
         queryBuilder.andWhere("categories.name IN (?)", [categories]);
       }
 
@@ -261,7 +263,6 @@ export async function registerPersonRoutes(
         const subCategories: string[] = subcategory
           .split(",")
           .map((subCat) => subCat.trim());
-        // console.debug("Applying subCategory filter:", subCategories);
         queryBuilder.andWhere("sub_categories.name IN (?)", [subCategories]);
       }
 
@@ -294,19 +295,29 @@ export async function registerPersonRoutes(
         xCoordinate: person.xCoordinate,
         yCoordinate: person.yCoordinate,
         title: person.firstName
-          ? `${person.firstName} ${person.lastName}` // If firstname exists in pop-up
-          : person.lastName, // If firstname doesnt exist in pop-up
+          ? `${person.firstName} ${person.lastName}`
+          : person.lastName,
         description: person.description,
-        nicknames: person.nicknames.map((nickname) => nickname.nickname), // Assuming `nickname.name` exists
-        categories: person.categories.map((category) => category.name), // Assuming `category.name` exists
-        subCategories: person.subCategories.map((subCategory) => subCategory.name), // Assuming `subCategory.name` exists
+        nicknames: person.nicknames.map((nickname) => nickname.nickname),
+        categories: person.categories.map((category) => category.name),
+        subCategories: person.subCategories.map(
+          (subCategory) => subCategory.name
+        ),
+        sources: person.sources
+          .filter((source) => source.sourceType === "IMAGE_URL")
+          .map((source) => ({
+            id: source.id,
+            sourceType: source.sourceType, // sourceType jääb alles
+            source: source.source, // URL või pildi link
+            location: source.location || null, // Kui location on tühi, siis seame null
+          })),
       }));
 
-      console.log(simplifiedPersons.slice(0, 10))
+      console.log(simplifiedPersons.slice(0, 10));
 
       return reply.status(200).send(simplifiedPersons);
     } catch (e) {
-      console.error("Error in /person/search route:", e);
+      console.error("Error in /markers route:", e);
       reply.status(500).send({
         message: `Server error while fetching people based on the following filters: `,
       });
