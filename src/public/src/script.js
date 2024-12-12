@@ -468,7 +468,7 @@ function loadMarkers(filters = {}) {
 
         if (categories && categories.length > 0) {
           const categorieElement = document.createElement("p");
-          categorieElement.innerHTML = `<strong>Kategooriad:</strong> ${categories.join(
+          categorieElement.innerHTML = `<strong>Valdkonnad:</strong> ${categories.join(
             ", "
           )}`;
           categorieElement.style.margin = "5px 0";
@@ -477,7 +477,7 @@ function loadMarkers(filters = {}) {
 
         if (subCategories && subCategories.length > 0) {
           const subCategoriesElement = document.createElement("p");
-          subCategoriesElement.innerHTML = `<strong>Alam Kategooriad:</strong> ${subCategories.join(
+          subCategoriesElement.innerHTML = `<strong>Alamvaldkonnad:</strong> ${subCategories.join(
             ", "
           )}`;
           subCategoriesElement.style.margin = "5px 0";
