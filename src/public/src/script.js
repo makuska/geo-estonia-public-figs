@@ -9,7 +9,6 @@ const osmLink = '<a href="http://openstreetmap.org">OpenStreetMap</a>';
 const osmUrl = "http://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const osmAttrib = `&copy; ${osmLink} Contributors`;
 
-
 const osmMap = L.tileLayer(osmUrl, { attribution: osmAttrib });
 
 // ---------------------------------------------------- //
@@ -36,7 +35,6 @@ L.control.scale({ imperial: false, maxWidth: 100 }).addTo(map);
 
 // osm layer
 osmMap.addTo(map);
-
 
 // ------------------------------------------------------ //
 // ---------------------- Sidebar ----------------------- //
@@ -208,100 +206,107 @@ new L.Control.MiniMap(osm2, { toggleDisplay: true }).addTo(map);
 // ---------------------- Filtering ----------------------//
 // ------------------------------------------------------ //
 
-document.addEventListener('DOMContentLoaded', () => {
-  const categoryContainer = document.getElementById('categoryContainer');
-  const subcategoryContainer = document.getElementById('subcategoryContainer');
-  const dateOfBirthStartInput = document.getElementById('dobStart');
-  const dateOfBirthEndInput = document.getElementById('dobEnd');
-  const applyFiltersButton = document.getElementById('applyFiltersButton');
-  const clearFiltersButton = document.getElementById('clearFiltersButton');
+document.addEventListener("DOMContentLoaded", () => {
+  const categoryContainer = document.getElementById("categoryContainer");
+  const subcategoryContainer = document.getElementById("subcategoryContainer");
+  const dateOfBirthStartInput = document.getElementById("dobStart");
+  const dateOfBirthEndInput = document.getElementById("dobEnd");
+  const applyFiltersButton = document.getElementById("applyFiltersButton");
+  const clearFiltersButton = document.getElementById("clearFiltersButton");
 
   const updateFilterButtons = () => {
     const filters = getFilters();
     const isAnyFilterSet = Object.keys(filters).length > 0;
     applyFiltersButton.disabled = !isAnyFilterSet;
-    clearFiltersButton.style.display = isAnyFilterSet ? 'block' : 'none';
+    clearFiltersButton.style.display = isAnyFilterSet ? "block" : "none";
   };
 
   // Fetch categories and populate checkboxes
-  fetch('/category')
-    .then(response => response.json())
-    .then(categories => {
-      categories.forEach(category => {
-        const categoryCheckbox = document.createElement('input');
-        categoryCheckbox.type = 'checkbox';
+  fetch("/category")
+    .then((response) => response.json())
+    .then((categories) => {
+      categories.forEach((category) => {
+        const categoryCheckbox = document.createElement("input");
+        categoryCheckbox.type = "checkbox";
         categoryCheckbox.value = category.name;
         categoryCheckbox.id = `category-${category.name}`;
-        
-        const label = document.createElement('label');
-        label.setAttribute('for', categoryCheckbox.id);
+
+        const label = document.createElement("label");
+        label.setAttribute("for", categoryCheckbox.id);
         label.textContent = category.name;
 
         // Append category checkbox and label to container
-        const categoryDiv = document.createElement('div');
+        const categoryDiv = document.createElement("div");
         categoryDiv.appendChild(categoryCheckbox);
         categoryDiv.appendChild(label);
         categoryContainer.appendChild(categoryDiv);
       });
     })
-    .catch(error => console.error('Error fetching categories:', error));
+    .catch((error) => console.error("Error fetching categories:", error));
 
   // Fetch subcategories based on selected categories
   function fetchSubcategories() {
-    subcategoryContainer.innerHTML = '';  // Reset subcategory container
+    subcategoryContainer.innerHTML = ""; // Reset subcategory container
 
-    const selectedCategories = Array.from(categoryContainer.querySelectorAll('input[type="checkbox"]:checked'))
-      .map(checkbox => checkbox.value);
+    const selectedCategories = Array.from(
+      categoryContainer.querySelectorAll('input[type="checkbox"]:checked')
+    ).map((checkbox) => checkbox.value);
 
     // Fetch categories again to get their subcategories
-    fetch('/category')
-      .then(response => response.json())
-      .then(categories => {
+    fetch("/category")
+      .then((response) => response.json())
+      .then((categories) => {
         const subcategories = new Set(); // Use a Set to avoid duplicate subcategories
 
         // Loop through selected categories and collect their subcategories
-        selectedCategories.forEach(selectedCategory => {
-          const selectedCategoryData = categories.find(cat => cat.name === selectedCategory);
+        selectedCategories.forEach((selectedCategory) => {
+          const selectedCategoryData = categories.find(
+            (cat) => cat.name === selectedCategory
+          );
           if (selectedCategoryData) {
-            selectedCategoryData.subCategories.forEach(subcategory => {
+            selectedCategoryData.subCategories.forEach((subcategory) => {
               subcategories.add(subcategory); // Add subcategory to Set (no duplicates)
             });
           }
         });
 
         // Add the subcategories as checkboxes to the container
-        subcategories.forEach(subcategory => {
-          const subcategoryCheckbox = document.createElement('input');
-          subcategoryCheckbox.type = 'checkbox';
+        subcategories.forEach((subcategory) => {
+          const subcategoryCheckbox = document.createElement("input");
+          subcategoryCheckbox.type = "checkbox";
           subcategoryCheckbox.value = subcategory;
           subcategoryCheckbox.id = `subcategory-${subcategory}`;
 
-          const label = document.createElement('label');
-          label.setAttribute('for', subcategoryCheckbox.id);
+          const label = document.createElement("label");
+          label.setAttribute("for", subcategoryCheckbox.id);
           label.textContent = subcategory;
 
-          const subcategoryDiv = document.createElement('div');
+          const subcategoryDiv = document.createElement("div");
           subcategoryDiv.appendChild(subcategoryCheckbox);
           subcategoryDiv.appendChild(label);
           subcategoryContainer.appendChild(subcategoryDiv);
         });
       })
-      .catch(error => console.error('Error fetching subcategories:', error));
+      .catch((error) => console.error("Error fetching subcategories:", error));
   }
 
   // Generate filters object based on user input
   function getFilters() {
-    const selectedCategories = Array.from(categoryContainer.querySelectorAll('input[type="checkbox"]:checked'))
-      .map(checkbox => checkbox.value);
-    const selectedSubcategories = Array.from(subcategoryContainer.querySelectorAll('input[type="checkbox"]:checked'))
-      .map(checkbox => checkbox.value);
+    const selectedCategories = Array.from(
+      categoryContainer.querySelectorAll('input[type="checkbox"]:checked')
+    ).map((checkbox) => checkbox.value);
+    const selectedSubcategories = Array.from(
+      subcategoryContainer.querySelectorAll('input[type="checkbox"]:checked')
+    ).map((checkbox) => checkbox.value);
     const dobStart = dateOfBirthStartInput.value.trim();
     const dobEnd = dateOfBirthEndInput.value.trim();
 
     const filters = {};
 
-    if (selectedCategories.length > 0) filters.category = selectedCategories.join(',');
-    if (selectedSubcategories.length > 0) filters.subcategory = selectedSubcategories.join(',');
+    if (selectedCategories.length > 0)
+      filters.category = selectedCategories.join(",");
+    if (selectedSubcategories.length > 0)
+      filters.subcategory = selectedSubcategories.join(",");
     if (dobStart) filters.dateOfBirthStart = dobStart;
     if (dobEnd) filters.dateOfBirthEnd = dobEnd;
 
@@ -309,33 +314,35 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Event listener for category change (checkbox change)
-  categoryContainer.addEventListener('change', () => {
+  categoryContainer.addEventListener("change", () => {
     fetchSubcategories(); // Re-fetch subcategories when category changes
     updateFilterButtons(); // Update filter buttons when category changes
   });
 
   // Event listeners for inputs (subcategory checkboxes, date inputs)
-  [dateOfBirthStartInput, dateOfBirthEndInput].forEach(input => {
-    input.addEventListener('input', updateFilterButtons);
+  [dateOfBirthStartInput, dateOfBirthEndInput].forEach((input) => {
+    input.addEventListener("input", updateFilterButtons);
   });
 
-  subcategoryContainer.addEventListener('change', updateFilterButtons);
+  subcategoryContainer.addEventListener("change", updateFilterButtons);
 
   // Add event listener to the "Apply Filters" button
-  applyFiltersButton.addEventListener('click', () => {
+  applyFiltersButton.addEventListener("click", () => {
     const filters = getFilters();
     loadMarkers(filters); // Call marker loading with filters
   });
 
   // Clear filters and reset UI
-  clearFiltersButton.addEventListener('click', () => {
-    categoryContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.checked = false);
-    subcategoryContainer.innerHTML = ''; // Clear subcategories
-    dateOfBirthStartInput.value = '';
-    dateOfBirthEndInput.value = '';
+  clearFiltersButton.addEventListener("click", () => {
+    categoryContainer
+      .querySelectorAll('input[type="checkbox"]')
+      .forEach((checkbox) => (checkbox.checked = false));
+    subcategoryContainer.innerHTML = ""; // Clear subcategories
+    dateOfBirthStartInput.value = "";
+    dateOfBirthEndInput.value = "";
     loadMarkers(); // Reload markers without filters
     updateFilterButtons(); // Update filter buttons visibility
-    map.flyTo([lat, lng], zoom)
+    map.flyTo([lat, lng], zoom);
   });
 
   updateFilterButtons(); // Initialize filter buttons state
@@ -347,19 +354,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load markers onto the map
 function loadMarkers(filters = {}) {
-  const loadingOverlay = document.getElementById('loadingOverlay')
-  loadingOverlay.style.display = 'flex' //add loading spinner
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "flex"; //add loading spinner
 
   const params = new URLSearchParams(filters).toString();
-  const endpoint = `http://127.0.0.1:3001/person/markers${params ? `?${params}` : ''}`;
+  const endpoint = `http://127.0.0.1:3001/person/markers${
+    params ? `?${params}` : ""
+  }`;
 
   fetch(endpoint)
-    .then(response => response.json())
-    .then(markerData => {
+    .then((response) => response.json())
+    .then((markerData) => {
       // Clear existing markers from the cluster group
       markers.clearLayers();
 
-      markerData.forEach(data => {
+      markerData.forEach((data) => {
         const {
           xCoordinate,
           yCoordinate,
@@ -371,7 +380,8 @@ function loadMarkers(filters = {}) {
           nicknames,
           categories,
           subCategories,
-        } = data
+          sources,
+        } = data;
 
         const marker = L.marker(new L.LatLng(xCoordinate, yCoordinate), {
           icon: createCustomDivIcon(),
@@ -379,59 +389,104 @@ function loadMarkers(filters = {}) {
         });
 
         // Create popup content
-        const popupContent = document.createElement('div');
+        const popupContent = document.createElement("div");
 
         // Add title
-        const titleElement = document.createElement('h3');
+        const titleElement = document.createElement("h3");
         titleElement.textContent = title;
         popupContent.appendChild(titleElement);
 
+        // Add sources (images) to the pop-up
+        if (Array.isArray(sources) && sources.length > 0) {
+          const sourceContainer = document.createElement("div");
+          sourceContainer.style.margin = "5px 0";
+          sourceContainer.style.position = "relative"; // Optional, if you'd like to add more styles later
+
+          const imagesContainer = document.createElement("div");
+          imagesContainer.style.display = "flex";
+          imagesContainer.style.justifyContent = "center"; // Center the image horizontally
+          imagesContainer.style.overflow = "hidden"; // Ensure image is confined to the container
+
+          let currentImageIndex = 0;
+
+          // Only add one image to the container (no need for navigation)
+          const item = sources[currentImageIndex]; // Get the first image
+          if (item && item.sourceType === "IMAGE_URL" && item.source) {
+            const img = document.createElement("img");
+
+            // Kui location on täis URL, siis kasutame seda otse
+            img.src =
+              item.location && item.location.startsWith("http")
+                ? item.location // Kui on täis URL, kasutame seda
+                : item.source; // Kui on suhteline URL, siis kasutame source väärtust
+
+            img.alt = `Image of ${title || "Unknown"}`; // Alt tekst pildi kohta
+            img.style.width = "100%"; // Tee pilt täisekraaniks
+            img.style.height = "auto";
+            img.style.transition = "transform 0.5s ease"; // Smooth transition for any future changes
+
+            imagesContainer.appendChild(img);
+          }
+
+          // Append image container to the source container
+          sourceContainer.appendChild(imagesContainer);
+
+          // Append the source container to the pop-up content
+          popupContent.appendChild(sourceContainer);
+        }
+
         // Add occupation
         if (occupation) {
-          const occupationElement = document.createElement('p');
+          const occupationElement = document.createElement("p");
           occupationElement.innerHTML = `<strong>Ametid:</strong> ${occupation}`;
-          occupationElement.style.margin = '5px 0'
+          occupationElement.style.margin = "5px 0";
           popupContent.appendChild(occupationElement);
         }
 
         if (nicknames && nicknames.length > 0) {
-          const nicknameElement = document.createElement('p');
-          nicknameElement.innerHTML = `<strong>Varjunimed:</strong> ${nicknames.join(', ')}`;
-          nicknameElement.style.margin = '5px 0'
+          const nicknameElement = document.createElement("p");
+          nicknameElement.innerHTML = `<strong>Varjunimed:</strong> ${nicknames.join(
+            ", "
+          )}`;
+          nicknameElement.style.margin = "5px 0";
           popupContent.appendChild(nicknameElement);
         }
 
         if (dateOfBirth) {
-          const dateOfBirthElement = document.createElement('p');
+          const dateOfBirthElement = document.createElement("p");
           dateOfBirthElement.innerHTML = `<strong>Sünnikuupäev:</strong> ${dateOfBirth}`;
-          dateOfBirthElement.style.margin = '5px 0'
+          dateOfBirthElement.style.margin = "5px 0";
           popupContent.appendChild(dateOfBirthElement);
         }
 
         if (dateOfDeath) {
-          const dateOfDeathElement = document.createElement('p');
+          const dateOfDeathElement = document.createElement("p");
           dateOfDeathElement.innerHTML = `<strong>Surmaaeg:</strong> ${dateOfDeath}`;
-          dateOfDeathElement.style.margin = '5px 0'
+          dateOfDeathElement.style.margin = "5px 0";
           popupContent.appendChild(dateOfDeathElement);
         }
 
         if (categories && categories.length > 0) {
-          const categorieElement = document.createElement('p');
-          categorieElement.innerHTML = `<strong>Kategooriad:</strong> ${categories.join(', ')}`;
-          categorieElement.style.margin = '5px 0'
+          const categorieElement = document.createElement("p");
+          categorieElement.innerHTML = `<strong>Valdkonnad:</strong> ${categories.join(
+            ", "
+          )}`;
+          categorieElement.style.margin = "5px 0";
           popupContent.appendChild(categorieElement);
         }
 
         if (subCategories && subCategories.length > 0) {
-          const subCategoriesElement = document.createElement('p');
-          subCategoriesElement.innerHTML = `<strong>Alam Kategooriad:</strong> ${subCategories.join(', ')}`;
-          subCategoriesElement.style.margin = '5px 0'
+          const subCategoriesElement = document.createElement("p");
+          subCategoriesElement.innerHTML = `<strong>Alamvaldkonnad:</strong> ${subCategories.join(
+            ", "
+          )}`;
+          subCategoriesElement.style.margin = "5px 0";
           popupContent.appendChild(subCategoriesElement);
         }
 
         // Add description
         if (description) {
-          const descriptionElement = document.createElement('div');
+          const descriptionElement = document.createElement("div");
           descriptionElement.innerHTML = description;
           descriptionElement.style.maxHeight = "200px";
           descriptionElement.style.overflowY = "auto";
@@ -441,51 +496,53 @@ function loadMarkers(filters = {}) {
         }
 
         marker.bindPopup(popupContent);
-        marker.on('click', clickZoom);
+        marker.on("click", clickZoom);
 
         markers.addLayer(marker);
       });
 
       map.addLayer(markers);
-      loadingOverlay.style.display = 'none'
+      loadingOverlay.style.display = "none";
     })
-    .catch(error => {
-      console.error('Error fetching marker data:', error)
-      loadingOverlay.style.display = 'none'
+    .catch((error) => {
+      console.error("Error fetching marker data:", error);
+      loadingOverlay.style.display = "none";
     });
 }
 
 // Load initial markers without filters when the page loads
-window.addEventListener('load', () => loadMarkers());
+window.addEventListener("load", () => loadMarkers());
 
 // ---------------------------------------------------- //
 // --------------- Search functionality --------------- //
 // ---------------------------------------------------- //
 
 // Searchbox
-let searchbox = L.control.searchbox({
+let searchbox = L.control
+  .searchbox({
     position: "topright",
     expand: "left",
-}).addTo(map);
+  })
+  .addTo(map);
 
 // Close and clear searchbox 600ms after pressing "ENTER" in the search box
 searchbox.onInput("keyup", function (e) {
-  getPersonByName(searchbox.getValue())
+  getPersonByName(searchbox.getValue());
   if (e.keyCode === 13 || e.keyCode === 27) {
     setTimeout(() => {
-      searchbox.hide()
-      searchbox.clear()
-    }, 300)
+      searchbox.hide();
+      searchbox.clear();
+    }, 300);
   }
 });
 
 // Close and clear searchbox 600ms after clicking the search button
 searchbox.onButton("click", function () {
-  getPersonByName(searchbox.getValue())
+  getPersonByName(searchbox.getValue());
   setTimeout(() => {
-    searchbox.hide()
-    searchbox.clear()
-  }, 300)
+    searchbox.hide();
+    searchbox.clear();
+  }, 300);
 });
 
 function getPersonByName(name) {
@@ -493,57 +550,59 @@ function getPersonByName(name) {
     if (map.getZoom() < 11) {
       map.setZoom(11);
     }
-    const searchUrl = `http://127.0.0.1:3001/person/search?name=${encodeURIComponent(name)}`;
+    const searchUrl = `http://127.0.0.1:3001/person/search?name=${encodeURIComponent(
+      name
+    )}`;
 
     fetch(searchUrl)
-        .then(response => response.json())
-        .then(data => {
-          const persons = data;
+      .then((response) => response.json())
+      .then((data) => {
+        const persons = data;
 
-          // Clear the existing dropdown options
-          searchbox.clearItems();
+        // Clear the existing dropdown options
+        searchbox.clearItems();
 
-          persons.forEach(person => {
-            searchbox.addItem(person.title)
-          });
+        persons.forEach((person) => {
+          searchbox.addItem(person.title);
+        });
 
-          // Add click event listener to search result items
-          const searchResultItems = searchbox.getValue();
+        // Add click event listener to search result items
+        const searchResultItems = searchbox.getValue();
 
-          if (typeof searchResultItems === "string") {
-            const selectedValue = searchResultItems;
-            const marker = findMarkerByTitle(selectedValue);
-            if (marker) {
-              const popup = marker.getPopup();
-              if (popup) {
-                // Check if the marker is part of a cluster
-                const cluster = marker.__parent;
-                if (cluster) {
-                  console.log("Zoom level for search:", map.getZoom());
-                  // Zoom to the cluster bounds
-                  map.fitBounds(cluster.getBounds());
+        if (typeof searchResultItems === "string") {
+          const selectedValue = searchResultItems;
+          const marker = findMarkerByTitle(selectedValue);
+          if (marker) {
+            const popup = marker.getPopup();
+            if (popup) {
+              // Check if the marker is part of a cluster
+              const cluster = marker.__parent;
+              if (cluster) {
+                console.log("Zoom level for search:", map.getZoom());
+                // Zoom to the cluster bounds
+                map.fitBounds(cluster.getBounds());
 
-                  // Open the cluster after zooming
-                  setTimeout(() => {
-                    cluster.spiderfy();
-                  }, 100);
+                // Open the cluster after zooming
+                setTimeout(() => {
+                  cluster.spiderfy();
+                }, 100);
 
-                  // Open the marker's popup after a short delay
-                  setTimeout(() => {
-                    marker.openPopup();
-                  }, 200);
-                } else {
-                  // Center the map on the marker and open the popup
-                  map.setView(marker.getLatLng(), map.getMaxZoom());
+                // Open the marker's popup after a short delay
+                setTimeout(() => {
                   marker.openPopup();
-                }
+                }, 200);
+              } else {
+                // Center the map on the marker and open the popup
+                map.setView(marker.getLatLng(), map.getMaxZoom());
+                marker.openPopup();
               }
             }
           }
-        })
-        .catch(error => {
-          console.error(error);
-        });
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
   } else {
     searchbox.clearItems();
   }
@@ -579,13 +638,13 @@ let namesFetched = false; // Flag to track whether names are already fetched
 
 // Function to fetch and display names (with caching)
 function fetchAndDisplayNames() {
-  const listContainer = document.getElementById('people-list');
-  const loadingOverlay = document.getElementById('loading-overlay'); // Reference to the loading overlay inside person-dropdown
+  const listContainer = document.getElementById("people-list");
+  const loadingOverlay = document.getElementById("loading-overlay"); // Reference to the loading overlay inside person-dropdown
 
   // Show the loading overlay
-  loadingOverlay.classList.remove('hidden');
+  loadingOverlay.classList.remove("hidden");
 
-  listContainer.innerHTML = ''; // Clear any existing content
+  listContainer.innerHTML = ""; // Clear any existing content
 
   // Check if data is already cached
   if (cachedPeople.length > 0) {
@@ -593,88 +652,88 @@ function fetchAndDisplayNames() {
     populatePeopleList(cachedPeople);
 
     // Hide the loading overlay
-    loadingOverlay.classList.add('hidden');
+    loadingOverlay.classList.add("hidden");
   } else {
     // Fetch the data from the API if not cached
-    fetch('http://127.0.0.1:3001/person')
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
-          cachedPeople = data; // Cache the data for future use
-          cachedPeople.sort((a, b) => {
-            const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
-            const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
-            return nameA.localeCompare(nameB); // Sort alphabetically
-          });
-          populatePeopleList(cachedPeople); // Display the sorted names
-
-          // Hide the loading overlay
-          loadingOverlay.classList.add('hidden');
-        })
-        .catch((error) => {
-          console.error('Error fetching names:', error);
-
-          // Hide the loading overlay even on error
-          loadingOverlay.classList.add('hidden');
+    fetch("http://127.0.0.1:3001/person")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        cachedPeople = data; // Cache the data for future use
+        cachedPeople.sort((a, b) => {
+          const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
+          const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
+          return nameA.localeCompare(nameB); // Sort alphabetically
         });
+        populatePeopleList(cachedPeople); // Display the sorted names
+
+        // Hide the loading overlay
+        loadingOverlay.classList.add("hidden");
+      })
+      .catch((error) => {
+        console.error("Error fetching names:", error);
+
+        // Hide the loading overlay even on error
+        loadingOverlay.classList.add("hidden");
+      });
   }
 }
 
 // Function to populate the people list
 function populatePeopleList(data) {
-  const listContainer = document.getElementById('people-list');
-  listContainer.innerHTML = ''; // Clear any existing content
+  const listContainer = document.getElementById("people-list");
+  listContainer.innerHTML = ""; // Clear any existing content
 
   data.forEach((person) => {
     const fullName = `${person.firstName} ${person.lastName}`;
     if (fullName) {
-      const listItem = document.createElement('li');
+      const listItem = document.createElement("li");
       listItem.textContent = fullName;
-      listItem.className = 'person-item';
+      listItem.className = "person-item";
 
       // Add click event to zoom in on the marker
-      listItem.addEventListener('click', () => {
+      listItem.addEventListener("click", () => {
         const { xCoordinate, yCoordinate } = person;
-        const marker = findMarkerByTitle(fullName)
-        console.log(marker)
+        const marker = findMarkerByTitle(fullName);
+        console.log(marker);
         const latLng = new L.LatLng(xCoordinate, yCoordinate);
         map.flyTo(latLng, map.getMaxZoom(), { duration: 1 });
 
         setTimeout(() => {
           if (marker) {
-            const popup = marker.getPopup()
-            console.log(popup)
+            const popup = marker.getPopup();
+            console.log(popup);
 
             //tbh idk, maybe keep it open, what y'all think?
-            closeSidebar()
+            closeSidebar();
 
             if (popup) {
-              const cluster = marker.__parent
+              const cluster = marker.__parent;
 
               if (cluster) {
                 setTimeout(() => {
                   cluster.spiderfy();
-                }, 200)
+                }, 200);
 
                 setTimeout(() => {
                   marker.openPopup();
-                }, 200)
+                }, 200);
               } else {
-                marker.openPopup()
+                marker.openPopup();
               }
             }
           }
-          getCenterOfMap()
-        }, 1100) //because the fly duration is 1, so open them after animation
+          getCenterOfMap();
+        }, 1100); //because the fly duration is 1, so open them after animation
       });
 
       listContainer.appendChild(listItem);
     } else {
-      console.warn('Missing name for person:', person);
+      console.warn("Missing name for person:", person);
     }
   });
 }
@@ -682,7 +741,7 @@ function populatePeopleList(data) {
 // Function to handle the sidebar menu click
 function setupSidebarButton() {
   const peopleButton = document.querySelector('[data-item="person-dropdown"]');
-  peopleButton.addEventListener('click', () => {
+  peopleButton.addEventListener("click", () => {
     if (!namesFetched) {
       // Only fetch names if not already fetched
       fetchAndDisplayNames();
@@ -696,10 +755,10 @@ function setupSidebarButton() {
 
 // Function to handle alphabet button clicks
 function setupAlphabetButtons() {
-  const alphabetButtons = document.querySelectorAll('.alphabet-letter');
+  const alphabetButtons = document.querySelectorAll(".alphabet-letter");
   alphabetButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const letter = button.getAttribute('data-letter');
+    button.addEventListener("click", () => {
+      const letter = button.getAttribute("data-letter");
       scrollToLetter(letter); // Scroll to the names starting with the clicked letter
     });
   });
@@ -707,20 +766,20 @@ function setupAlphabetButtons() {
 
 // Function to scroll to the first name starting with the selected letter
 function scrollToLetter(letter) {
-  const listContainer = document.getElementById('people-list');
-  const listItems = listContainer.getElementsByTagName('li');
+  const listContainer = document.getElementById("people-list");
+  const listItems = listContainer.getElementsByTagName("li");
 
   for (let i = 0; i < listItems.length; i++) {
     const fullName = listItems[i].textContent;
     if (fullName.charAt(0).toUpperCase() === letter) {
-      listItems[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      listItems[i].scrollIntoView({ behavior: "smooth", block: "start" });
       break;
     }
   }
 }
 
 // Call setupSidebarButton and setupAlphabetButtons when the page loads
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   setupSidebarButton();
   setupAlphabetButtons();
 });
