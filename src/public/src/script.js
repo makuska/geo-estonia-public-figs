@@ -140,8 +140,11 @@ function createCustomDivIcon() {
 // ---------------------------------------------------- //
 // --------------- Back to home button ---------------- //
 // ---------------------------------------------------- //
-const htmlTemplate =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M32 18.451L16 6.031 0 18.451v-5.064L16 .967l16 12.42zM28 18v12h-8v-8h-8v8H4V18l12-9z" /></svg>';
+const htmlTemplate = `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"
+    ><path d="M32 18.451L16 6.031 0 18.451v-5.064L16 .967l16 12.42zM28 18v12h-8v-8h-8v8H4V18l12-9z" />
+  </svg>
+`;
 // const htmlTemplate = 'img/search_icon.png'
 
 // create custom button
@@ -208,6 +211,33 @@ new L.Control.MiniMap(osm2, { toggleDisplay: true }).addTo(map);
 // ---------------------- Filtering ----------------------//
 // ------------------------------------------------------ //
 
+/**
+ * Get user selected filters from filtering UI menu and return them in a formatted object
+ * @returns {{}}
+ */
+function getUserSelectedFilters() {
+  const categoryContainer = document.getElementById('categoryContainer');
+  const subcategoryContainer = document.getElementById('subcategoryContainer');
+  const dateOfBirthStartInput = document.getElementById('dobStart');
+  const dateOfBirthEndInput = document.getElementById('dobEnd');
+
+  const selectedCategories = Array.from(categoryContainer.querySelectorAll('input[type="checkbox"]:checked'))
+      .map(checkbox => checkbox.value);
+  const selectedSubcategories = Array.from(subcategoryContainer.querySelectorAll('input[type="checkbox"]:checked'))
+      .map(checkbox => checkbox.value);
+  const dobStart = dateOfBirthStartInput.value.trim();
+  const dobEnd = dateOfBirthEndInput.value.trim();
+
+  const filters = {};
+
+  if (selectedCategories.length > 0) filters.category = selectedCategories.join(',');
+  if (selectedSubcategories.length > 0) filters.subcategory = selectedSubcategories.join(',');
+  if (dobStart) filters.dateOfBirthStart = dobStart;
+  if (dobEnd) filters.dateOfBirthEnd = dobEnd;
+
+  return filters;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const categoryContainer = document.getElementById('categoryContainer');
   const subcategoryContainer = document.getElementById('subcategoryContainer');
@@ -217,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearFiltersButton = document.getElementById('clearFiltersButton');
 
   const updateFilterButtons = () => {
-    const filters = getFilters();
+    const filters = getUserSelectedFilters();
     const isAnyFilterSet = Object.keys(filters).length > 0;
     applyFiltersButton.disabled = !isAnyFilterSet;
     clearFiltersButton.style.display = isAnyFilterSet ? 'block' : 'none';
@@ -289,25 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(error => console.error('Error fetching subcategories:', error));
   }
 
-  // Generate filters object based on user input
-  function getFilters() {
-    const selectedCategories = Array.from(categoryContainer.querySelectorAll('input[type="checkbox"]:checked'))
-      .map(checkbox => checkbox.value);
-    const selectedSubcategories = Array.from(subcategoryContainer.querySelectorAll('input[type="checkbox"]:checked'))
-      .map(checkbox => checkbox.value);
-    const dobStart = dateOfBirthStartInput.value.trim();
-    const dobEnd = dateOfBirthEndInput.value.trim();
-
-    const filters = {};
-
-    if (selectedCategories.length > 0) filters.category = selectedCategories.join(',');
-    if (selectedSubcategories.length > 0) filters.subcategory = selectedSubcategories.join(',');
-    if (dobStart) filters.dateOfBirthStart = dobStart;
-    if (dobEnd) filters.dateOfBirthEnd = dobEnd;
-
-    return filters;
-  }
-
   // Event listener for category change (checkbox change)
   categoryContainer.addEventListener('change', () => {
     fetchSubcategories(); // Re-fetch subcategories when category changes
@@ -323,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add event listener to the "Apply Filters" button
   applyFiltersButton.addEventListener('click', () => {
-    const filters = getFilters();
+    const filters = getUserSelectedFilters();
     loadMarkers(filters); // Call marker loading with filters
   });
 
@@ -345,25 +356,96 @@ document.addEventListener('DOMContentLoaded', () => {
 // --------------- Load Markers to the map --------------- //
 // ------------------------------------------------------- //
 
-// Load markers onto the map
+/**
+ * Load markers to the map. Can provide filters as a function param, without it all the markers are fetched by default
+ * @param filters
+ */
 function loadMarkers(filters = {}) {
   const loadingOverlay = document.getElementById('loadingOverlay')
   loadingOverlay.style.display = 'flex' //add loading spinner
 
-  const params = new URLSearchParams(filters).toString();
+  const params = new URLSearchParams(filters).toString()
   const endpoint = `http://127.0.0.1:3001/person/markers${params ? `?${params}` : ''}`;
 
   fetch(endpoint)
-    .then(response => response.json())
-    .then(markerData => {
-      // Clear existing markers from the cluster group
-      markers.clearLayers();
+      .then(response => response.json())
+      .then(markerData => {
+        console.log(markerData);
+        markers.clearLayers()
 
-      markerData.forEach(data => {
+        markerData.forEach(data => {
+          const {
+            id,
+            xCoordinate,
+            yCoordinate,
+            firstName,
+            lastName
+          } = data
+
+          let title = ''
+          if (firstName && lastName) {
+            title = firstName + ' ' + lastName;
+          } else {
+            title = lastName;
+          }
+
+          // Create popup content
+          const popupContent = document.createElement('div');
+
+          // Add title
+          const titleElement = document.createElement('h3');
+          titleElement.textContent = title;
+          popupContent.appendChild(titleElement);
+
+          const loadingElementBackground = document.createElement('div');
+          loadingElementBackground.style.display = 'flex';
+          loadingElementBackground.style.justifyContent = 'center';
+          popupContent.appendChild(loadingElementBackground);
+
+          const loadingElement = document.createElement('div');
+          loadingElement.className = 'spinner';
+          loadingElementBackground.appendChild(loadingElement);
+
+          const marker = L.marker(new L.LatLng(xCoordinate, yCoordinate), {
+            id: id,
+            icon: createCustomDivIcon(),
+            title: title,
+          })
+
+          marker.bindPopup(popupContent);
+          marker.on('click', clickZoom)
+
+          markers.addLayer(marker)
+
+          map.addLayer(markers);
+        })
+
+        loadingOverlay.style.display = 'none'
+      })
+      .catch(error => {
+        console.error('Error fetching marker data:', error)
+      })
+}
+
+/**
+ * Get all the details for a person based on the id and filters as an object
+ * @param id - persons id
+ */
+function getPersonDetails(id) {
+  if (!id) {
+    window.alert('Viga isiku saamisel, puudulik isiku identifikaatori kood. Proovige hiljem uuesti!')
+    return
+  }
+
+  const endpoint = `http://127.0.0.1:3001/person/${id}`;
+
+  fetch(endpoint)
+      .then(response => response.json())
+      .then(personDetails => {
+
         const {
-          xCoordinate,
-          yCoordinate,
-          title,
+          firstName,
+          lastName,
           description,
           occupation,
           dateOfBirth,
@@ -371,12 +453,17 @@ function loadMarkers(filters = {}) {
           nicknames,
           categories,
           subCategories,
-        } = data
+        } = personDetails
 
-        const marker = L.marker(new L.LatLng(xCoordinate, yCoordinate), {
-          icon: createCustomDivIcon(),
-          title: title,
-        });
+        let title = ''
+        if (firstName && lastName) {
+          title = firstName + ' ' + lastName;
+        } else {
+          title = lastName;
+        }
+
+        const marker = findMarkerByTitle(title)
+        console.log(marker)
 
         // Create popup content
         const popupContent = document.createElement('div');
@@ -385,74 +472,76 @@ function loadMarkers(filters = {}) {
         const titleElement = document.createElement('h3');
         titleElement.textContent = title;
         popupContent.appendChild(titleElement);
+          // const popupContent = marker._popup._content
 
-        // Add occupation
-        if (occupation) {
-          const occupationElement = document.createElement('p');
-          occupationElement.innerHTML = `<strong>Ametid:</strong> ${occupation}`;
-          occupationElement.style.margin = '5px 0'
-          popupContent.appendChild(occupationElement);
-        }
+          // Add occupation
+          if (occupation) {
+            const occupationElement = document.createElement('p');
+            occupationElement.innerHTML = `<strong>Ametid:</strong> ${occupation}`;
+            occupationElement.style.margin = '5px 0'
+            popupContent.appendChild(occupationElement);
+          }
 
-        if (nicknames && nicknames.length > 0) {
-          const nicknameElement = document.createElement('p');
-          nicknameElement.innerHTML = `<strong>Varjunimed:</strong> ${nicknames.join(', ')}`;
-          nicknameElement.style.margin = '5px 0'
-          popupContent.appendChild(nicknameElement);
-        }
+          if (nicknames && nicknames.length > 0) {
+            const nicknameElement = document.createElement('p');
+            const nicknamesFormatted = nicknames.map(nickname => nickname.nickname);
+            nicknameElement.innerHTML = `<strong>Varjunimed:</strong> ${nicknamesFormatted.join(', ')}`;
+            nicknameElement.style.margin = '5px 0'
+            popupContent.appendChild(nicknameElement);
+          }
 
-        if (dateOfBirth) {
-          const dateOfBirthElement = document.createElement('p');
-          dateOfBirthElement.innerHTML = `<strong>Sünnikuupäev:</strong> ${dateOfBirth}`;
-          dateOfBirthElement.style.margin = '5px 0'
-          popupContent.appendChild(dateOfBirthElement);
-        }
+          if (dateOfBirth) {
+            const dateOfBirthElement = document.createElement('p');
+            dateOfBirthElement.innerHTML = `<strong>Sünnikuupäev:</strong> ${dateOfBirth}`;
+            dateOfBirthElement.style.margin = '5px 0'
+            popupContent.appendChild(dateOfBirthElement);
+          }
 
-        if (dateOfDeath) {
-          const dateOfDeathElement = document.createElement('p');
-          dateOfDeathElement.innerHTML = `<strong>Surmaaeg:</strong> ${dateOfDeath}`;
-          dateOfDeathElement.style.margin = '5px 0'
-          popupContent.appendChild(dateOfDeathElement);
-        }
+          if (dateOfDeath) {
+            const dateOfDeathElement = document.createElement('p');
+            dateOfDeathElement.innerHTML = `<strong>Surmaaeg:</strong> ${dateOfDeath}`;
+            dateOfDeathElement.style.margin = '5px 0'
+            popupContent.appendChild(dateOfDeathElement);
+          }
 
-        if (categories && categories.length > 0) {
-          const categorieElement = document.createElement('p');
-          categorieElement.innerHTML = `<strong>Kategooriad:</strong> ${categories.join(', ')}`;
-          categorieElement.style.margin = '5px 0'
-          popupContent.appendChild(categorieElement);
-        }
+          if (categories && categories.length > 0) {
+            const categorieElement = document.createElement('p');
+            const categoryNames = categories.map(category => category.name);
+            categorieElement.innerHTML = `<strong>Kategooriad:</strong> ${categoryNames.join(', ')}`;
+            categorieElement.style.margin = '5px 0'
+            popupContent.appendChild(categorieElement);
+          }
 
-        if (subCategories && subCategories.length > 0) {
-          const subCategoriesElement = document.createElement('p');
-          subCategoriesElement.innerHTML = `<strong>Alam Kategooriad:</strong> ${subCategories.join(', ')}`;
-          subCategoriesElement.style.margin = '5px 0'
-          popupContent.appendChild(subCategoriesElement);
-        }
+          if (subCategories && subCategories.length > 0) {
+            const subCategoriesElement = document.createElement('p');
+            const subCategoryNames = subCategories.map(subCategory => subCategory.name);
+            subCategoriesElement.innerHTML = `<strong>Alam Kategooriad:</strong> ${subCategoryNames.join(', ')}`;
+            subCategoriesElement.style.margin = '5px 0'
+            popupContent.appendChild(subCategoriesElement);
+          }
 
-        // Add description
-        if (description) {
-          const descriptionElement = document.createElement('div');
-          descriptionElement.innerHTML = description;
-          descriptionElement.style.maxHeight = "200px";
-          descriptionElement.style.overflowY = "auto";
-          descriptionElement.style.padding = "10px";
-          descriptionElement.style.border = "1px solid #ccc";
-          popupContent.appendChild(descriptionElement);
-        }
+          // Add description
+          if (description) {
+            const descriptionElement = document.createElement('div');
+            descriptionElement.innerHTML = description;
+            descriptionElement.style.maxHeight = "200px";
+            descriptionElement.style.overflowY = "auto";
+            descriptionElement.style.padding = "10px";
+            descriptionElement.style.border = "1px solid #ccc";
+            popupContent.appendChild(descriptionElement);
+          }
 
-        marker.bindPopup(popupContent);
-        marker.on('click', clickZoom);
+          marker.bindPopup(popupContent);
+          marker.on('click', clickZoom);
 
-        markers.addLayer(marker);
+          markers.addLayer(marker);
+
+        map.addLayer(markers);
+        loadingOverlay.style.display = 'none'
+      }).catch(error => {
+        console.error('Error fetching marker data:', error)
+        loadingOverlay.style.display = 'none'
       });
-
-      map.addLayer(markers);
-      loadingOverlay.style.display = 'none'
-    })
-    .catch(error => {
-      console.error('Error fetching marker data:', error)
-      loadingOverlay.style.display = 'none'
-    });
 }
 
 // Load initial markers without filters when the page loads
@@ -493,7 +582,11 @@ function getPersonByName(name) {
     if (map.getZoom() < 11) {
       map.setZoom(11);
     }
-    const searchUrl = `http://127.0.0.1:3001/person/search?name=${encodeURIComponent(name)}`;
+
+    let searchUrl = `http://127.0.0.1:3001/person/search?name=${encodeURIComponent(name)}`;
+    if (Object.keys(getUserSelectedFilters()).length > 0) {
+      searchUrl += `&filters=${JSON.stringify(getUserSelectedFilters())}`;
+    }
 
     fetch(searchUrl)
         .then(response => response.json())
@@ -538,6 +631,10 @@ function getPersonByName(name) {
                   marker.openPopup();
                 }
               }
+
+              if (marker._popupHandlersAdded) {
+                getPersonDetails(marker.options.id);
+              }
             }
           }
         })
@@ -563,6 +660,9 @@ function findMarkerByTitle(title) {
 // center the map when popup is clicked
 function clickZoom(e) {
   const marker = e.target;
+  if (marker._popupHandlersAdded) {
+    getPersonDetails(marker.options.id);
+  }
 
   if (!marker.__parent) {
     // Marker is not part of a cluster
@@ -596,7 +696,7 @@ function fetchAndDisplayNames() {
     loadingOverlay.classList.add('hidden');
   } else {
     // Fetch the data from the API if not cached
-    fetch('http://127.0.0.1:3001/person')
+    fetch('http://127.0.0.1:3001/person/markers')
         .then((response) => {
           if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
@@ -644,13 +744,10 @@ function populatePeopleList(data) {
         const latLng = new L.LatLng(xCoordinate, yCoordinate);
         map.flyTo(latLng, map.getMaxZoom(), { duration: 1 });
 
+        //issue on selles, et lendab sinna kus on see asukoht aga cluster on reaalsuses voiboll ateises kohas
         setTimeout(() => {
           if (marker) {
             const popup = marker.getPopup()
-            console.log(popup)
-
-            //tbh idk, maybe keep it open, what y'all think?
-            closeSidebar()
 
             if (popup) {
               const cluster = marker.__parent
@@ -662,13 +759,21 @@ function populatePeopleList(data) {
 
                 setTimeout(() => {
                   marker.openPopup();
+
+                  if (marker._popupHandlersAdded) {
+                    getPersonDetails(marker.options.id);
+                  }
                 }, 200)
               } else {
                 marker.openPopup()
+
+                if (marker._popupHandlersAdded) {
+                  getPersonDetails(marker.options.id);
+                }
               }
             }
           }
-          getCenterOfMap()
+          // getCenterOfMap()
         }, 1100) //because the fly duration is 1, so open them after animation
       });
 

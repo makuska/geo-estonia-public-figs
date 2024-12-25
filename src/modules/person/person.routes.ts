@@ -62,14 +62,30 @@ export async function registerPersonRoutes(
   });
 
   app.get("/search", async (request, reply) => {
-    const { name } = request.query as { name: string };
+    const { name, filters } = request.query as {
+      name: string;
+      filters?: string
+    }
+
+    let parsedFilters: { category?: string; subcategory?: string; dateOfBirthStart?: string; dateOfBirthEnd?: string } = {}
+
+    if (filters) {
+      try {
+        parsedFilters = JSON.parse(filters);
+      } catch (e) {
+        console.error("Error parsing filters:", e);
+        return reply.status(400).send({ message: "Invalid filters format" });
+      }
+    }
+
+    const { category, subcategory, dateOfBirthStart, dateOfBirthEnd } = parsedFilters
 
     try {
       const searchTerm = `%${name.toLowerCase()}%`;
 
-      //sadly sqlite doesn't support $ilike, so can't use it here, yikes..
-      const query = `
+      let query = `
         SELECT
+          person.id,
           person.x_coordinate as xCoordinate,
           person.y_coordinate as yCoordinate,
           person.first_name AS firstName,
@@ -77,26 +93,61 @@ export async function registerPersonRoutes(
           GROUP_CONCAT(nickname.nickname, ', ') AS nicknames
         FROM person
                LEFT JOIN nickname ON person.id = nickname.person_id
-        WHERE
-          LOWER(person.first_name) LIKE ?
-           OR LOWER(person.last_name) LIKE ?
-           OR LOWER(nickname.nickname) LIKE ?
-        GROUP BY person.id
-          LIMIT 15;
+               LEFT JOIN person_categories ON person.id = person_categories.person_id
+               LEFT JOIN category ON person_categories.category_id = category.id
+               LEFT JOIN person_sub_categories ON person.id = person_sub_categories.person_id
+               LEFT JOIN sub_category ON person_sub_categories.sub_category_id = sub_category.id
+        WHERE (
+                LOWER(person.first_name) LIKE ?
+                  OR LOWER(person.last_name) LIKE ?
+                  OR LOWER(nickname.nickname) LIKE ?
+                )
       `;
 
-      const results = await db.em.getConnection().execute(query, [searchTerm, searchTerm, searchTerm])
+      const params: any[] = [searchTerm, searchTerm, searchTerm];
+
+      if (category) {
+        const categories = category.split(",").map((cat) => cat.trim());
+        query += ` AND category.name IN (${categories.map(() => "?").join(", ")})`;
+        params.push(...categories);
+      }
+
+
+      if (subcategory) {
+        const subcategories = subcategory.split(",").map((sub) => sub.trim());
+        query += ` AND sub_category.name IN (${subcategories.map(() => "?").join(", ")})`;
+        params.push(...subcategories);
+      }
+
+      if (dateOfBirthStart) {
+        query += ` AND CAST(SUBSTR(person.date_of_birth, -4, 4) AS INTEGER) >= ?`;
+        params.push(parseInt(dateOfBirthStart, 10));
+      }
+
+      if (dateOfBirthEnd) {
+        query += ` AND CAST(SUBSTR(person.date_of_birth, -4, 4) AS INTEGER) <= ?`;
+        params.push(parseInt(dateOfBirthEnd, 10));
+      }
+
+      query += `
+        GROUP BY person.id
+        LIMIT 15;
+      `;
+
+      const results = await db.em.getConnection().execute(query, params);
 
       const simplifiedPersons = results.map((row) => ({
         xCoordinate: row.xCoordinate,
         yCoordinate: row.yCoordinate,
-        title: `${row.firstName} ${row.lastName}`,
-      }))
+        title: row.firstName
+            ? `${row.firstName} ${row.lastName}` // If firstname exists in pop-up
+            : row.lastName,
+      }));
 
       return reply.status(200).send(simplifiedPersons);
     } catch (e) {
-      console.error("Error in /person/name route:", e);
-      reply.status(500).send({ message: "Server error while fetching " });
+      console.error("Error in /search route:", e);
+      reply.status(500).send({ message: "Server error while fetching data." });
     }
   });
 
@@ -223,93 +274,96 @@ export async function registerPersonRoutes(
 
   app.get("/markers", async (request, reply) => {
     const { category, subcategory, dateOfBirthStart, dateOfBirthEnd, name } =
-      request.query as {
-        category?: string;
-        subcategory?: string;
-        dateOfBirthStart?: string;
-        dateOfBirthEnd?: string;
-        name?: string;
-      };
-
-    try {
-      const queryBuilder = db.person
-        .createQueryBuilder("person")
-        .select([
-          "person.id",
-          "person.firstName",
-          "person.lastName",
-          "person.occupation",
-          "person.dateOfBirth",
-          "person.dateOfDeath",
-          "person.xCoordinate",
-          "person.yCoordinate",
-          "person.description",
-        ])
-        .leftJoinAndSelect("person.nicknames", "nicknames")
-        .leftJoinAndSelect("person.categories", "categories")
-        .leftJoinAndSelect("person.subCategories", "sub_categories");
-
-      if (category && category.trim() !== "") {
-        const categories: string[] = category
-          .split(",")
-          .map((cat) => cat.trim());
-        // console.debug("Applying category filter:", categories);
-        queryBuilder.andWhere("categories.name IN (?)", [categories]);
-      }
-
-      if (subcategory && subcategory.trim() !== "") {
-        const subCategories: string[] = subcategory
-          .split(",")
-          .map((subCat) => subCat.trim());
-        // console.debug("Applying subCategory filter:", subCategories);
-        queryBuilder.andWhere("sub_categories.name IN (?)", [subCategories]);
-      }
-
-      if (dateOfBirthStart || dateOfBirthEnd) {
-        let condition: string = "";
-        const params: any[] = [];
-
-        if (dateOfBirthStart) {
-          condition += `CAST(SUBSTR(person.date_of_birth, -4, 4) AS INTEGER) >= ?`;
-          params.push(parseInt(dateOfBirthStart, 10));
-        }
-        if (dateOfBirthEnd) {
-          if (condition) condition += " AND ";
-          condition += `CAST(SUBSTR(person.date_of_birth, -4, 4) AS INTEGER) <= ?`;
-          params.push(parseInt(dateOfBirthEnd, 10));
+        request.query as {
+          category?: string;
+          subcategory?: string;
+          dateOfBirthStart?: string;
+          dateOfBirthEnd?: string;
+          name?: string;
         }
 
-        if (condition) {
-          queryBuilder.andWhere(condition, params);
+    if (!category && !subcategory && !dateOfBirthStart && !dateOfBirthEnd && !name) {
+      const query = `
+        SELECT 
+            person.id,
+            person.x_coordinate as xCoordinate,
+            person.y_coordinate as yCoordinate,
+            person.first_name AS firstName,
+            person.last_name AS lastName
+        FROM person;
+      `
+
+      try {
+        const markers = await db.em.getConnection().execute(query)
+
+        if (markers && markers.length > 0) {
+          return reply.status(200).send(markers)
         }
+      } catch (e) {
+        console.error("Error in /person/markers route:", e)
+        reply.status(500).send({
+          message: `Server error while fetching markers`,
+        })
       }
+    } else {
+      try {
+        const queryBuilder = db.person
+            .createQueryBuilder("person")
+            .select([
+              "person.id",
+              "person.firstName",
+              "person.lastName",
+              "person.xCoordinate",
+              "person.yCoordinate",
+            ])
+            .leftJoin("person.nicknames", "nicknames")
+            .leftJoin("person.categories", "categories")
+            .leftJoin("person.subCategories", "sub_categories");
 
-      const persons: Person[] = await queryBuilder.getResultList();
+        if (category && category.trim() !== "") {
+          const categories: string[] = category
+              .split(",")
+              .map((cat) => cat.trim());
+          // console.debug("Applying category filter:", categories);
+          queryBuilder.andWhere("categories.name IN (?)", [categories]);
+        }
 
-      const simplifiedPersons = persons.map((person) => ({
-        id: person.id,
-        occupation: person.occupation,
-        dateOfBirth: person.dateOfBirth,
-        dateOfDeath: person.dateOfDeath,
-        xCoordinate: person.xCoordinate,
-        yCoordinate: person.yCoordinate,
-        title: person.firstName
-          ? `${person.firstName} ${person.lastName}` // If firstname exists in pop-up
-          : person.lastName, // If firstname doesnt exist in pop-up
-        description: person.description,
-        nicknames: person.nicknames.map((nickname) => nickname.nickname), // Assuming `nickname.name` exists
-        categories: person.categories.map((category) => category.name), // Assuming `category.name` exists
-        subCategories: person.subCategories.map((subCategory) => subCategory.name), // Assuming `subCategory.name` exists
-      }));
+        if (subcategory && subcategory.trim() !== "") {
+          const subCategories: string[] = subcategory
+              .split(",")
+              .map((subCat) => subCat.trim());
+          // console.debug("Applying subCategory filter:", subCategories);
+          queryBuilder.andWhere("sub_categories.name IN (?)", [subCategories]);
+        }
 
-      console.log(simplifiedPersons.slice(0, 10))
+        if (dateOfBirthStart || dateOfBirthEnd) {
+          let condition: string = "";
+          const params: any[] = [];
 
-      return reply.status(200).send(simplifiedPersons);
-    } catch (e) {
-      console.error("Error in /person/search route:", e);
-      reply.status(500).send({
-        message: `Server error while fetching people based on the following filters: `,
-      });
+          if (dateOfBirthStart) {
+            condition += `CAST(SUBSTR(person.date_of_birth, -4, 4) AS INTEGER) >= ?`;
+            params.push(parseInt(dateOfBirthStart, 10));
+          }
+          if (dateOfBirthEnd) {
+            if (condition) condition += " AND ";
+            condition += `CAST(SUBSTR(person.date_of_birth, -4, 4) AS INTEGER) <= ?`;
+            params.push(parseInt(dateOfBirthEnd, 10));
+          }
+
+          if (condition) {
+            queryBuilder.andWhere(condition, params);
+          }
+        }
+
+        const persons: Person[] = await queryBuilder.getResultList();
+
+        return reply.status(200).send(persons);
+      } catch (e) {
+        console.error("Error in /person/search route:", e);
+        reply.status(500).send({
+          message: `Server error while fetching people based on the following filters: `,
+        });
+      }
     }
-  });
+  })
 }
